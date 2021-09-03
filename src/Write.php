@@ -22,12 +22,14 @@ class Write
     }
 
     public function send($str)
-    {
+    {		
         $l = strlen($str);
         if ($l === 0) {
             return false;
         }
-        $len = fwrite($this->conn, $str);
+		
+		$len = $this->conn->send($str);
+
         if ($len !== $l) {
             throw new Exception('write fail', Exception::CODE_WRITE_FAIL);
         }

@@ -2,6 +2,8 @@
 
 namespace OneNsq;
 
+use Swoole\Client as SwooleSocketClient;
+
 class Client
 {
     /**
@@ -23,13 +25,16 @@ class Client
 
     private $config = [];
 
-    private $address = '';
+    private $address = '127.0.0.1';
+    
+	private $port = 4150;
 
-    public function __construct($address, $config = [])
+    public function __construct($address, $port, $config = [])
     {
         $config        = $config + Protocol::defaultConf();
         $this->config  = $config;
         $this->address = $address;
+        $this->port = $port;
 
         $this->heartbeat_interval_timeout = $this->config['heartbeat_interval'] * 1.9;
         $this->start();
@@ -41,16 +46,18 @@ class Client
     {
         $config     = $this->config;
         $address    = $this->address;
-        $this->conn = stream_socket_client($address, $code, $msg, $config['connect_time_out']);
-        stream_set_timeout($this->conn, $config['msg_timeout'] / 1000);
-        if (!$this->conn) {
+		
+		$this->conn = new SwooleSocketClient(SWOOLE_SOCK_TCP);
+        if (!$this->conn->connect($this->address, $this->port)) {
             throw new Exception($msg, $code);
         }
+		
         $this->write = new Write($this->conn);
         $this->read  = new Read($this->conn);
-
+		
         $this->identify($config);
         $ret = $this->read->valFixed();
+		
         if (isset($config['feature_negotiation']) && $config['feature_negotiation']) {
             $this->server_conf = json_decode($ret, true);
         } else {
@@ -89,6 +96,7 @@ class Client
         if ($this->isTimeOut()) {
             $this->start();
         }
+		
         $this->write->send($str);
     }
 
@@ -128,6 +136,7 @@ class Client
             Protocol::string(pack('N', count($msgs)) . $str)
         );
         $ret = $this->read->valFixed();
+	
         $this->isOk($ret);
         return true;
     }

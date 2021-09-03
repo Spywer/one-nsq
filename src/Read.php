@@ -2,6 +2,8 @@
 
 namespace OneNsq;
 
+use Swoole\Client as SwooleSocketClient;
+
 class Read
 {
     /**
@@ -20,15 +22,62 @@ class Read
 
     public function val($n)
     {
-        $str = fread($this->conn, $n);
-        if ($str === false || !isset($str[0])) {
+		// 1048576
+		
+		$str = $this->conn->recv($n > 4 ? 8192 : $n, SwooleSocketClient::MSG_PEEK | SwooleSocketClient::MSG_WAITALL);
+		
+		if ($str === false || !isset($str[0])) {
             throw new Exception('read from fail', Exception::CODE_READ_FAIL);
         }
-        if (strlen($str) < $n) {
-            $str .= $this->val($n - strlen($str));
-        }
+		
+		if($n > 4) { $str = substr($str, 4); }
+			
+		//var_dump(addslashes($str));
+		
         return $str;
     }
+	
+	public function responseFix($str)
+    {
+		if (str_ends_with($str, Protocol::OK)) {
+			
+			return Protocol::OK;
+			
+		} else if (str_ends_with($str, Protocol::HEARTBEAT)) {
+			
+			$string = preg_replace('#^\{.+?\}#', '', $str);
+			
+			// Срабатывает при чтении и добавлении сообщения
+			if(substr($string, 8, 2) == 'OK') {
+				
+				//var_dump(addslashes($string));
+				
+				// Срабатывает при добавлении сообщения
+				if(substr($string, 18, 2)) {
+					return Protocol::HEARTBEAT;
+				}
+				
+				//var_dump(addslashes(substr($string, 8, 2)));
+			
+				// Усли будут проблемы с сообщениями, то использовать регулярку вместо следующей инструкции
+				//$string = preg_replace('#^.+\*#', '', $str);
+				
+				$string = substr($string, 14);
+				$string = substr($string, 0, -11);
+				$string = substr($string, 4);
+				
+				$message = new Data($string);
+				
+				//var_dump($message);
+				
+				return $message;
+			}
+			
+			return Protocol::HEARTBEAT;
+		}
+		
+		return $str;
+	}
 
     /**
      * @return Data|string
@@ -40,8 +89,9 @@ class Read
         $ret  = $this->val($l);
         $code = unpack('N', substr($ret, 0, 4))[1];
         $ret  = substr($ret, 4);
+		
         if ($code === Protocol::FRAME_TYPE_RESPONSE) {
-            return $ret;
+            return $this->responseFix($ret);
         } else if ($code === Protocol::FRAME_TYPE_ERROR) {
             throw new Exception('err msg : ' . $ret, Exception::CODE_MSG_ERR);
         } else if ($code === Protocol::FRAME_TYPE_MESSAGE) {
