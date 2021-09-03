@@ -68,6 +68,10 @@ class Read
 				
 				$message = new Data($string);
 				
+				if(empty($message->id)) {
+					return Protocol::HEARTBEAT;
+				}
+				
 				//var_dump($message);
 				
 				return $message;
