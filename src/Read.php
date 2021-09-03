@@ -22,9 +22,9 @@ class Read
 
     public function val($n)
     {
-		// 1048576
+		// 1048576 - 1МБ
 		
-		$str = $this->conn->recv($n > 4 ? 8192 : $n, SwooleSocketClient::MSG_PEEK | SwooleSocketClient::MSG_WAITALL);
+		$str = $this->conn->recv($n > 4 ? 1048576 : $n, SwooleSocketClient::MSG_PEEK | SwooleSocketClient::MSG_WAITALL);
 		
 		if ($str === false || !isset($str[0])) {
             throw new Exception('read from fail', Exception::CODE_READ_FAIL);
