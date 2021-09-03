@@ -175,6 +175,12 @@ class Client
         $this->send(Protocol::COMMAND_NOP . "\n");
     }
 
+    // Add by Spywer
+    public function finish($id)
+    {
+        $this->fin($id);
+    }
+
     public function touch($id)
     {
         $this->send(Protocol::COMMAND_TOUCH . ' ' . $id . "\n");
