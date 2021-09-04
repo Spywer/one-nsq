@@ -47,7 +47,7 @@ class Client
         $config     = $this->config;
         $address    = $this->address;
 		
-		$this->conn = new SwooleSocketClient(SWOOLE_SOCK_TCP);
+		$this->conn = new SwooleSocketClient(SWOOLE_SOCK_TCP | SWOOLE_KEEP);
         if (!$this->conn->connect($this->address, $this->port)) {
             throw new Exception($msg, $code);
         }
